@@ -16,6 +16,7 @@
         <img
           v-if="!item.error"
           :src="item.src"
+          :style="{ height: item.error ? '0px' : item.imgHeight + 'px' }"
         />
       </div>
       <div>{{item.info}}</div>
@@ -42,7 +43,7 @@ export default {
   watch: {
     list (nextList, prevList) {
       console.log('watch', this.isNomore)
-      if (prevList.length) debugger
+      // if (prevList.length) debugger
       this.isNomore = false
 
       const arr = [ ...nextList ]
@@ -84,18 +85,27 @@ export default {
 
     preload (arr) {
       const list = arr.map(item => {
-        const img = new Image()
+        // const img = new Image()
+        const img = document.createElement('img')
+        img.setAttribute('left', '-99999px')
+        img.setAttribute('opacity', '0')
 
         return new Promise((resolve, reject) => {
 
           img.onload = e => {
+            const { width, height } = img.getBoundingClientRect()
+            const _height = CARD_W / width * height
+            item.imgHeight = _height
             resolve()
+            document.body.removeChild(img)
           }
           img.onerror = e => {
             item.error = true
             resolve()
+            document.body.removeChild(img)
           }
           img.src = item.src
+          document.body.appendChild(img)
         })
       })
 
@@ -107,19 +117,21 @@ export default {
 
     wait (arr) {
 
-      const temp = []
+      // const temp = []
 
       const data = arr.splice(0, 1)
-      const promise = data.map(item => {
+      const item = data[0]
+      // const promise = data.map(item => {
 
-        return new Promise((resolve) => {
+      //   return new Promise((resolve) => {
 
           const min = Math.min.apply(null, this.heights)
-          const index = this.heights.findIndex((h, idx) => h === min && !temp.includes(idx))
-          temp.push(index)
+          // const index = this.heights.findIndex((h, idx) => h === min && !temp.includes(idx))
+          const index = this.heights.findIndex((h, idx) => h === min)
+          // temp.push(index)
 
           const top = this.heights[index] + GAP_H
-          this.heights[index] = 999999
+          // this.heights[index] = 999999
 
           item.top = top
           item.left = (CARD_W + GAP_W) * index + GAP_W
@@ -129,21 +141,28 @@ export default {
             // 计算下一个元素的top值
             const dom = document.querySelector(`.card-${item.index}`)
             this.heights[index] = dom.offsetTop + dom.clientHeight
+            console.log(item.index, dom.offsetTop, dom.clientHeight, dom.offsetTop + dom.clientHeight + GAP_H)
 
-            resolve()
+            // resolve()
+            if (arr.length) {
+              this.wait(arr)
+            } else {
+              console.log('end')
+              this.isNomore = true
+            }
           })
-        })
+        // })
 
-      })
+      // })
 
-      Promise.all(promise).then(() => {
-        if (arr.length) {
-          this.wait(arr)
-        } else {
-          console.log('end')
-          this.isNomore = true
-        }
-      })
+      // Promise.all(promise).then(() => {
+      //   if (arr.length) {
+      //     this.wait(arr)
+      //   } else {
+      //     console.log('end')
+      //     this.isNomore = true
+      //   }
+      // })
 
     },
 
