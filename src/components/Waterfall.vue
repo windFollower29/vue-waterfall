@@ -1,27 +1,6 @@
 <template>
   <div class="waterfall">
-    <div class="card"
-      :index="idx+1"
-      :class="[
-        'card-' + idx,
-        item.error && 'error'
-      ]"
-      v-for="(item, idx) in data"
-      :style="{
-        top: item.top + 'px',
-        left: item.left + 'px'
-      }"
-    >
-      <div class="img">
-        <img
-          v-if="!item.error"
-          :src="item.src"
-          :style="{ height: item.error ? '0px' : item.imgHeight + 'px' }"
-        />
-      </div>
-      <div>{{item.info}}</div>
-      <div>第{{idx+1}}张图片</div>
-    </div>
+    <slot></slot>
   </div>
 </template>
 
