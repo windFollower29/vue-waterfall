@@ -4,22 +4,18 @@
       :list="list"
       @nomore="nomore"
     >
-      <waterfall-slot
-        v-for="(item, idx) in list"
-        :data="item"
-        :key="idx"
-        :index="idx"
-      >
-        <div class="img">
-          <img
-            v-if="!item.error"
-            :src="item.src"
-            :style="{ height: item.error ? '0px' : item.imgHeight + 'px' }"
-          />
-        </div>
-        <div>{{item.info}}</div>
-        <div>第{{idx}}张图片</div>
+      <waterfall-slot slot-scope="{ card, index}">
+
+        <img
+          v-if="!card.error"
+          :src="card.src"
+          :style="{ height: card.error ? '0px' : card.imgHeight + 'px' }"
+        />
+        <div>{{card.info}}</div>
+        <div>第{{index}}张图片</div>
+
       </waterfall-slot>
+
     </waterfall>
   </div>
 </template>

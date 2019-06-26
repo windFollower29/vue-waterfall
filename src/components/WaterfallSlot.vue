@@ -1,16 +1,5 @@
 <template>
-  <div class="waterfall-slot card"
-    :key="data.key"
-    :index="data.index"
-    :class="[
-      'card-' + data.index,
-      data.error && 'error'
-    ]"
-    :style="{
-      top: data.top + 'px',
-      left: data.left + 'px'
-    }"
-  >
+  <div class="img">
     <slot></slot>
   </div>
 </template>

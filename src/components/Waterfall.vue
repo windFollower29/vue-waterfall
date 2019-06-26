@@ -1,6 +1,19 @@
 <template>
   <div class="waterfall">
-    <slot></slot>
+    <div class="waterfall-slot card"
+      v-for="(item, idx) in data"
+      :key="idx"
+      :class="[
+        'card-' + idx,
+        item.error && 'error'
+      ]"
+      :style="{
+        top: item.top + 'px',
+        left: item.left + 'px'
+      }"
+    >
+      <slot :card="item" :index="idx"></slot>
+    </div>
   </div>
 </template>
 
