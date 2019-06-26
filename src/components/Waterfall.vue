@@ -79,8 +79,10 @@ export default {
       const list = arr.map(item => {
         // const img = new Image()
         const img = document.createElement('img')
+        img.setAttribute('display', 'none')
         img.setAttribute('left', '-99999px')
         img.setAttribute('opacity', '0')
+        img.setAttribute('display', 'block')
 
         return new Promise((resolve, reject) => {
 
@@ -97,6 +99,7 @@ export default {
             document.body.removeChild(img)
           }
           img.src = item.src
+          console.log('---')
           document.body.appendChild(img)
         })
       })
@@ -175,6 +178,10 @@ export default {
     position: absolute;
     width: 100px;
     // border: 1px solid #ccc;
+
+    .img{
+      overflow: hidden;
+    }
 
     img{
       display: block;

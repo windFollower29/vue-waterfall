@@ -5,12 +5,13 @@
       @nomore="nomore"
     >
       <waterfall-slot slot-scope="{ card, index}">
-
-        <img
-          v-if="!card.error"
-          :src="card.src"
-          :style="{ height: card.error ? '0px' : card.imgHeight + 'px' }"
-        />
+        <div class="img">
+          <img
+            v-if="!card.error"
+            :src="card.src"
+            :style="{ height: card.error ? '0px' : card.imgHeight + 'px' }"
+          />
+        </div>
         <div>{{card.info}}</div>
         <div>第{{index}}张图片</div>
 

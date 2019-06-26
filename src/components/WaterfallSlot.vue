@@ -1,7 +1,8 @@
 <template>
-  <div class="img">
+  <div class="wrapper">
     <slot></slot>
   </div>
+
 </template>
 
 <script>
