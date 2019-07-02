@@ -1,10 +1,16 @@
 <template>
-  <div>
+  <div class="waterfall-wrap">
     <waterfall
+      :colmn-num="3"
+      :gap-width="10"
+      :bottom-offset="200"
       :list="list"
-      @nomore="nomore"
+      @finish-render="finishRender"
+      @loadmore="loadmore"
     >
-      <waterfall-slot slot-scope="{ card, index}">
+      <!-- <waterfall-slot slot-scope="{ card, index }"> -->
+      <div slot-scope="{ card, index }">
+
         <div class="img">
           <img
             v-if="!card.error"
@@ -14,8 +20,11 @@
         </div>
         <div>{{card.info}}</div>
         <div>第{{index}}张图片</div>
+        <div v-if="!!(index % 2)">随机出现的我</div>
 
-      </waterfall-slot>
+      </div>
+
+      <!-- </waterfall-slot> -->
 
     </waterfall>
   </div>
@@ -43,32 +52,33 @@ export default {
 
   created () {
 
+    this.group = 0
+
     this.getList()
-
-    window.addEventListener('scroll', e => {
-
-      this.onScroll()
-    }, false)
-
 
   },
 
   methods: {
 
-    onScroll () {
-
+    finishRender () {
+      console.log('finishRender')
     },
 
     getList () {
 
-      axios.get('../static/mock/data.json?group=' + this.group++)
-      .then(res => {
-        console.log(res)
-        this.list = res.data
-      })
+      setTimeout(() => {
+        
+        axios.get('../static/mock/data.json?group=' + this.group++)
+        .then(res => {
+          console.log(res)
+          this.list = res.data
+        })
+
+      }, 1000 * Math.random() + 100);
+
     },
 
-    nomore () {
+    loadmore () {
       this.getList()
     }
 
@@ -76,6 +86,22 @@ export default {
 }
 </script>
 
-<style>
+<style lang="stylus" >
+
+*
+  padding 0
+  margin 0
+
+html,
+body
+  width 100%
+  height 100%
+
+body
+  background-color: #ebebeb
+
+.waterfall-wrap
+  width 80%
+  margin 100px auto
 
 </style>

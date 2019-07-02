@@ -1,5 +1,7 @@
 <template>
-  <div class="waterfall">
+  <div class="waterfall"
+    ref="waterfall"
+  >
     <div class="waterfall-slot card"
       v-for="(item, idx) in data"
       :key="idx"
@@ -9,7 +11,8 @@
       ]"
       :style="{
         top: item.top + 'px',
-        left: item.left + 'px'
+        left: item.left + 'px',
+        width: cardWidth + 'px'
       }"
     >
       <slot :card="item" :index="idx"></slot>
@@ -19,32 +22,37 @@
 
 <script>
 
-const COLMN_NUM = 2
-const GAP_W = 10
-// const GAP_H = 10
-const GAP_H = 0
-const CARD_W = 100
+const RESIZE_DELAY = 500
 
 export default {
 
   props: {
     list: {},
-
+    colmnNum: {
+      default: 2
+    },
+    gapWidth: {
+      default: 50
+    },
+    gapHeight: {
+      default: 20
+    },
+    bottomOffset: {
+      default: 0
+    }
   },
 
   watch: {
     list (nextList, prevList) {
-      console.log('watch', this.isNomore)
-      // if (prevList.length) debugger
-      this.isNomore = false
-
+  
       const arr = [ ...nextList ]
       arr.forEach((item, idx) => {
         // 标上序号
         item.index = this.data.length + idx
       })
-      this.temp = arr
+
       this.preload(arr)
+
     }
   },
 
@@ -52,55 +60,155 @@ export default {
 
     return {
       data: [],
+      cardWidth: undefined,
 
-      temp: []
     }
   },
 
   created () {
-    this.heights= [0, 0]
+    
     this.isNomore = false
+    this.isResizing = false
 
-    window.addEventListener('scroll', e => {
+    this.resizeTimer = null
 
-      if (
-        this.isNomore &&
-        document.documentElement.scrollTop + window.innerHeight + 1 > Math.max.apply(null, this.heights)
-      ) {
-        this.$emit('nomore')
-      }
-    }, false)
+    this.frame = document.createElement('frame')
+    document.body.appendChild(this.frame)
+
+    this.reset()
+    this.initScroll()
+    this.initResize()
 
   },
 
+  mounted () {
+    this.calculateCardWidth()
+  },
+
   methods: {
+    initResize () {
+      window.addEventListener('resize', this.onResize.bind(this))
+    },
+
+    onResize (e) {
+
+      if (this.resizeTimer) clearTimeout(this.resizeTimer)
+
+      window.timer = this.resizeTimer = setTimeout(() => {
+        
+        this.isResizing = true
+        this.calculateCardWidth()
+  
+        this.resize()
+          .then(() => {
+  
+            this.isResizing = false
+          })
+
+      }, RESIZE_DELAY);
+    },
+
+    calculateCardWidth () {
+      this.cardWidth = (this.$refs.waterfall.getBoundingClientRect().width - (this.colmnNum - 1) * this.gapWidth) / this.colmnNum
+    },
+
+    async resize () {
+      console.log('loading resize...')
+      this.reset()
+
+      for (let i = 0; i < this.data.length; i++) {
+
+        const { oWidth, oHeight } = this.data[i]
+        const imgHeight = this.cardWidth / oWidth * oHeight
+
+        const { top, left, index } = this.getPosition()
+        this.$set(
+          this.data,
+          i,
+          Object.assign(this.data[i], {
+            imgHeight,
+            top,
+            left
+          })
+        )
+
+        await new Promise((resolve, reject) => {
+          this.$nextTick(() => {
+            this.updateHeights(this.data[i], index)
+            resolve()
+          })
+        })
+      }
+    },
+
+    getPosition () {
+      const min = Math.min.apply(null, this.heights)
+      const index = this.heights.findIndex((h, idx) => h === min)
+
+      return {
+        top: this.heights[index] + this.gapHeight,
+        left: (this.cardWidth + this.gapWidth) * index,
+        index
+      }
+    },
+
+    updateHeights (item, index) {
+      const dom = document.querySelector(`.card-${item.index}`)
+      this.heights[index] = dom.offsetTop + dom.clientHeight
+    },
+
+    reset () {
+      this.heights= Array.apply(null, { length: this.colmnNum }).fill(0)
+    },
+
+    initScroll () {
+      window.addEventListener('scroll', e => {
+
+        if (
+          this.isNomore &&
+          !this.isResizing &&
+          document.documentElement.scrollTop
+            + window.innerHeight
+            + this.bottomOffset
+            > Math.max.apply(null, this.heights)
+        ) {
+          this.isNomore = false
+          this.$emit('loadmore')
+        }
+      }, false)
+    },
 
     preload (arr) {
       const list = arr.map(item => {
-        // const img = new Image()
-        const img = document.createElement('img')
-        img.setAttribute('display', 'none')
-        img.setAttribute('left', '-99999px')
-        img.setAttribute('opacity', '0')
-        img.setAttribute('display', 'block')
+
+        // const img = document.createElement('img')
+        // img.className += 'img-hidden'
+        const img = new Image()
 
         return new Promise((resolve, reject) => {
 
           img.onload = e => {
-            const { width, height } = img.getBoundingClientRect()
-            const _height = CARD_W / width * height
-            item.imgHeight = _height
+            // const { width, height } = img.getBoundingClientRect()
+            const { width, height } = img
+            const _height = this.cardWidth / width * height
+            // console.log(img, img.width, width)
+            Object.assign(item, {
+              imgHeight: _height,
+              oWidth: width,
+              oHeight: height
+            })
             resolve()
-            document.body.removeChild(img)
+            // document.body.removeChild(img)
           }
           img.onerror = e => {
             item.error = true
             resolve()
-            document.body.removeChild(img)
+            // document.body.removeChild(img)
           }
           img.src = item.src
           console.log('---')
-          document.body.appendChild(img)
+          // document.body.appendChild(img)
+          // this.frame.appendChild(img)
         })
       })
 
@@ -112,52 +220,32 @@ export default {
 
     wait (arr) {
 
-      // const temp = []
-
       const data = arr.splice(0, 1)
       const item = data[0]
-      // const promise = data.map(item => {
 
-      //   return new Promise((resolve) => {
+      const min = Math.min.apply(null, this.heights)
 
-          const min = Math.min.apply(null, this.heights)
-          // const index = this.heights.findIndex((h, idx) => h === min && !temp.includes(idx))
-          const index = this.heights.findIndex((h, idx) => h === min)
-          // temp.push(index)
+      const index = this.heights.findIndex((h, idx) => h === min)
 
-          const top = this.heights[index] + GAP_H
-          // this.heights[index] = 999999
+      item.top = this.heights[index] + this.gapHeight
+      item.left = (this.cardWidth + this.gapWidth) * index 
 
-          item.top = top
-          item.left = (CARD_W + GAP_W) * index + GAP_W
-          // console.log(item.index+1, item.top)
-          this.data.push(item)
-          this.$nextTick(() => {
-            // 计算下一个元素的top值
-            const dom = document.querySelector(`.card-${item.index}`)
-            this.heights[index] = dom.offsetTop + dom.clientHeight
-            console.log(item.index, dom.offsetTop, dom.clientHeight, dom.offsetTop + dom.clientHeight + GAP_H)
+      this.data.push(item)
+      this.$nextTick(() => {
+        // 计算下一个元素的top值
+        const dom = document.querySelector(`.card-${item.index}`)
+        this.heights[index] = dom.offsetTop + dom.clientHeight
 
-            // resolve()
-            if (arr.length) {
-              this.wait(arr)
-            } else {
-              console.log('end')
-              this.isNomore = true
-            }
-          })
-        // })
+        console.log(item.index, dom.offsetTop, dom.clientHeight, dom.offsetTop + dom.clientHeight + this.gapHeight)
 
-      // })
-
-      // Promise.all(promise).then(() => {
-      //   if (arr.length) {
-      //     this.wait(arr)
-      //   } else {
-      //     console.log('end')
-      //     this.isNomore = true
-      //   }
-      // })
+        if (arr.length) {
+          this.wait(arr)
+        } else {
+          console.log('end')
+          this.isNomore = true
+          this.$emit('finish-render')
+        }
+      })
 
     },
 
@@ -176,8 +264,10 @@ export default {
 
   .card{
     position: absolute;
-    width: 100px;
-    // border: 1px solid #ccc;
+    background-color: #fff;
+    box-shadow: 0 0 28px 5px rgba(0,0,0,.1);
+    border-radius: 6px;
+    overflow: hidden;
 
     .img{
       overflow: hidden;
