@@ -39,19 +39,55 @@ export default {
     },
     bottomOffset: {
       default: 0
+    },
+    syncLoadImage: {
+      default: false
     }
   },
 
   watch: {
-    list (nextList, prevList) {
+    list (next, prev) {
+      console.log(next, prev)
   
-      const arr = [ ...nextList ]
-      arr.forEach((item, idx) => {
-        // 标上序号
-        item.index = this.data.length + idx
-      })
+      // const arr = [ ...nextList ]
+      // arr.forEach((item, idx) => {
+      //   // 标上序号
+      //   item.index = this.data.length + idx
+      // })
 
-      this.preload(arr)
+      // 清空当前瀑布流
+      if (next.length === 0) {
+        console.log(JSON.stringify(next))
+        this.data = []
+        this.renderIndex = 0
+        this.resetHeights()
+        return
+      }
+
+      // 加长瀑布流(前一次数据已render完成)
+      if (
+        (
+          !prev
+          || next.length > prev.length
+        )
+        && this.finishFlag
+      ) {
+
+        this.finishFlag = 0
+
+        this.syncLoadImage
+          ? this.loadImage()
+          : this.renderList()
+
+        return
+      }
+
+      // 修改瀑布流（前一次数据未render完成）
+      if (
+        !this.finishFlag
+      ) {
+        
+      }
 
     }
   },
@@ -66,6 +102,9 @@ export default {
   },
 
   created () {
+
+    this.renderIndex = 0
+    this.finishFlag = 1
     
     this.isNomore = false
     this.isResizing = false
@@ -75,9 +114,9 @@ export default {
     this.frame = document.createElement('frame')
     document.body.appendChild(this.frame)
 
-    this.reset()
+    this.resetHeights()
     this.initScroll()
-    this.initResize()
+    // this.initResize()
 
   },
 
@@ -114,7 +153,7 @@ export default {
 
     async resize () {
       console.log('loading resize...')
-      this.reset()
+      this.resetHeights()
 
       for (let i = 0; i < this.data.length; i++) {
 
@@ -157,7 +196,7 @@ export default {
       this.heights[index] = dom.offsetTop + dom.clientHeight
     },
 
-    reset () {
+    resetHeights () {
       this.heights= Array.apply(null, { length: this.colmnNum }).fill(0)
     },
 
@@ -178,7 +217,7 @@ export default {
       }, false)
     },
 
-    preload (arr) {
+    loadImage () {
       const list = arr.map(item => {
 
         // const img = document.createElement('img')
@@ -214,23 +253,29 @@ export default {
 
       Promise.all(list)
         .then(() => {
-          this.wait(arr)
+          this.renderList(arr)
         })
     },
 
-    wait (arr) {
+    renderList () {
 
-      const data = arr.splice(0, 1)
-      const item = data[0]
+      const item = this.list[this.renderIndex]
 
       const min = Math.min.apply(null, this.heights)
 
       const index = this.heights.findIndex((h, idx) => h === min)
 
-      item.top = this.heights[index] + this.gapHeight
-      item.left = (this.cardWidth + this.gapWidth) * index 
+      Object.assign(item, {
+        top: this.heights[index] + this.gapHeight,
+        left: (this.cardWidth + this.gapWidth) * index,
+        width: this.cardWidth,
+        height: Math.random() * 20 + 100,
+        index: this.renderIndex
+      })
 
       this.data.push(item)
+      this.renderIndex++
+
       this.$nextTick(() => {
         // 计算下一个元素的top值
         const dom = document.querySelector(`.card-${item.index}`)
@@ -238,11 +283,12 @@ export default {
 
         console.log(item.index, dom.offsetTop, dom.clientHeight, dom.offsetTop + dom.clientHeight + this.gapHeight)
 
-        if (arr.length) {
-          this.wait(arr)
+        if (this.renderIndex < this.list.length) {
+          this.renderList()
         } else {
           console.log('end')
           this.isNomore = true
+          this.finishFlag = 1
           this.$emit('finish-render')
         }
       })

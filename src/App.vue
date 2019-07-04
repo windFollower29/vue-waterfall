@@ -1,4 +1,18 @@
 <template>
+<div>
+
+  <div class="fixed">
+    <div>
+      <button @click="clear">清空</button>
+    </div>
+    <div>
+      <button @click="refresh">刷新</button>
+    </div>
+    <div>
+      <button @click="add">加载下一页</button>
+    </div>
+  </div>
+
   <div class="waterfall-wrap">
     <waterfall
       :colmn-num="3"
@@ -15,7 +29,11 @@
           <img
             v-if="!card.error"
             :src="card.src"
-            :style="{ height: card.error ? '0px' : card.imgHeight + 'px' }"
+            :style="{
+              // height: card.error ? '0px' : card.imgHeight + 'px' 
+              width: card.width + 'px',
+              height: card.height + 'px'
+            }"
           />
         </div>
         <div>{{card.info}}</div>
@@ -28,6 +46,7 @@
 
     </waterfall>
   </div>
+</div>
 </template>
 
 <script>
@@ -64,14 +83,20 @@ export default {
       console.log('finishRender')
     },
 
-    getList () {
+    getList (clearFlag) {
 
       setTimeout(() => {
         
         axios.get('../static/mock/data.json?group=' + this.group++)
         .then(res => {
-          console.log(res)
-          this.list = res.data
+
+          if (clearFlag) {
+            this.list = []
+            this.list = res.data
+          } else {
+
+            this.list = this.list.concat(res.data)
+          }
         })
 
       }, 1000 * Math.random() + 100);
@@ -79,6 +104,18 @@ export default {
     },
 
     loadmore () {
+      this.getList()
+    },
+
+    clear () {
+      this.list = []
+    },
+
+    refresh () {
+      this.getList(true)
+    },
+
+    add () {
       this.getList()
     }
 
@@ -100,8 +137,14 @@ body
 body
   background-color: #ebebeb
 
+.fixed
+  position fixed
+
+
 .waterfall-wrap
   width 80%
   margin 100px auto
+
+
 
 </style>
