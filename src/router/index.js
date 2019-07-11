@@ -5,6 +5,8 @@ Vue.use(Router)
 
 import App from '../App'
 import Tick from '../Tick'
+import Scroll from '../Scroll'
+import Touch from '../Touch'
 
 const routes = [
   {
@@ -16,8 +18,16 @@ const routes = [
     component: Tick
   },
   {
+    path: '/scroll',
+    component: Scroll
+  },
+  {
+    path: '/Touch',
+    component: Touch
+  },
+  {
     path: '/',
-    component: App
+    component: Touch
   },
 ]
 
