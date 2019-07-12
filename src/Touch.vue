@@ -1,9 +1,22 @@
 <template>
-  <div class="touch">
+  <div class="touch"
+	 	ref="touch"
+	>
+		<div class="nav">
+			<span v-for="(item,idx) in data"
+				@click="gotoPage(idx)"
+			>{{idx}}</span>
+		</div>
+
     <div class="wrapper"
       ref="wrapper"
     >
-      <div class="inner" v-for="(item, idx) in data">
+      <div class="inner"
+				v-for="(item, index) in data"
+			>
+
+        <div class="title">{{index}}</div>
+
         <div class="" v-for="(item, idx) in data">
           {{idx}}
         </div>
@@ -13,6 +26,8 @@
 </template>
 
 <script>
+
+import Animation from './animation'
 
 var Tween = {
     Linear: function(t,b,c,d){ return c*t/d + b; },
@@ -159,23 +174,10 @@ var Tween = {
     }
 }	
 
-function scroll(b, c, d){
 
-    var speed = Math.ceil( Tween.Quad.easeOut( scrollTime, b, c, d) );
-
-    $('.carUl').css( 'left', speed );
-    examin( $('.carUl').position().left );
-    
-    if( scrollTime < d ){
-
-        scrollTime += 10;
-        timer = setTimeout( function(){
-            scroll( b, c, d);
-        }, 20);
-    }
-}
 
 function getTranslateX (dom) {
+
   var style = window.getComputedStyle(dom);
   var matrix = new WebKitCSSMatrix(style.webkitTransform);
   // console.log('translateX: ', matrix.m41);
@@ -226,19 +228,60 @@ export default {
   },
 
   mounted () {
-    // document.addEventListener("wheel",function(e){
-    //     e.preventDefault()
-    // }, false)
-    // document.addEventListener('scroll', (e) => {
-    //   e.stopPropagation()
-    //   e.preventDefault()
-    //   console.log(e)
-    // }, false)
+		
+		this.itemWidth = this.$refs.touch.getBoundingClientRect().width
+		this.el = this.$refs.wrapper
 
     this.initEvent()
   },
 
   methods: {
+
+		gotoPage (page) {
+			const dx = -page * this.itemWidth
+			const dom = this.el
+			console.log(getTranslateX(this.el), dx)
+
+			new Animation({
+				ox: getTranslateX(this.el),
+				dx,
+				updateCb (o) {
+					dom.style.transform = 'translateX(' + o.x + 'px)'
+				}
+			})
+		},
+
+		motion (dir, endX) {
+
+			const dom = this.el
+
+			let factor = 0
+			let index
+
+			if (dir == 3) {
+				factor = -1
+				index = Math.ceil(endX / this.itemWidth)
+
+			} else if (dir == 4) {
+				factor = 1
+				index = Math.floor(endX / this.itemWidth)
+			}
+
+			let destX = (index + factor) * this.itemWidth
+
+			destX >= 0 && (destX = 0)
+			// console.log('---', destX)
+
+			// dom.style.transform = `translateX(${destX}px)`
+			new Animation({
+				ox: endX,
+				dx: destX,
+				updateCb (o) {
+					dom.style.transform = 'translateX(' + o.x + 'px)'
+				}
+			})
+
+		},
 
     initEvent () {
       const dom = this.$refs.wrapper
@@ -246,8 +289,6 @@ export default {
       window.addEventListener('touchstart', e => {
         this.downX = e.targetTouches[0].pageX
         this.downY = e.targetTouches[0].pageY
-        // console.log('down', e, this.downX, this.downY)
-        // console.log(getTranslateX(dom))
 
         this.originX = getTranslateX(dom)
 
@@ -256,32 +297,37 @@ export default {
       window.addEventListener('touchmove', e => {
         this.moveX = e.targetTouches[0].pageX
         this.moveY = e.targetTouches[0].pageY
-// console.log(getTranslateX(dom))
+
         const diffX = this.moveX - this.downX
         const diffY = this.moveY - this.downY
-        // console.log('move', diffX)
-        // dom.style.transform = `translateX(${diffX}px)`
+
         const dir = getDirection(this.downX, this.downY, this.moveX, this.moveY)
 
         if (dir == 3 || dir == 4) {
 
-          dom.style.transform = `translateX(${this.originX + diffX}px)`
-        }
+					dom.style.transform = `translateX(${this.originX + diffX}px)`
+				}
+				
+				// this.moveX = getTranslateX(dom)
 
       }, false)
       // }, { passive: false })
 
-      // window.ontouchmove = (e) => {
-      //   e.preventDefault()
-      //   console.log('ontouchmove', e)
-      // }
-
       window.addEventListener('touchend', e => {
         this.upX = e.changedTouches[0].pageX
-        this.upY = e.changedTouches[0].pageY
+				this.upY = e.changedTouches[0].pageY
+				
+				const diffX = this.upX - this.downX
+				const diffY = this.upY - this.downY
         // console.log('touchend', e, this.upX, this.upY)
-        // console.log(getDirection(this.downX, this.downY, this.upX, this.upY))
-      }, false)
+				// console.log(getDirection(this.downX, this.downY, this.upX, this.upY))
+				const dir = getDirection(this.downX, this.downY, this.upX, this.upY);
+			
+				this.endX = getTranslateX(dom)
+				this.motion(dir, this.endX)
+
+			}, false)
+
     },
   }
 }
@@ -298,26 +344,57 @@ html, body{
 }
 
 .touch{
+	// position: relative;
+	// width: 100vw;
+	// height: 100vh;
   // width: 200px;
   // height: 200px;
   // border: 1px solid #ccc;
   // margin-top: 100px;
   // margin: 50px;
-  overflow-x: hidden;
+	overflow-x: hidden;
+
+	.nav{
+		position: fixed;
+		z-index: 1;
+		top: 0;
+		left: 0;
+		right: 0;
+		padding-left: 30px;
+
+		span{
+			display: inline-block;
+			padding: 2px 6px;
+		}
+	}
+	
+	.title{
+		position: absolute;
+		top: 50vh;
+		left: 50vw;
+	}
 
   .wrapper{
+		// position: absolute;
+
     width: 1000px;
     // height: 400px;
     height: 100vh;
     white-space: nowrap;
 
     .inner{
-      display: inline-block;
-      width: 100px;
+			position: relative;
+			display: inline-block;
+			width: 100vw;
+      // width: 100px;
       // height: 100%;
       height: 200vh;
       background-color: #f00;
 
+			.title{
+				color: #fff;
+				font-size: 30px;
+			}
     }
 
     >div{
